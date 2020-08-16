@@ -1,0 +1,136 @@
+#!/usr/bin/python
+
+import subprocess
+import os
+import sys
+import re
+import time
+
+import tweepy
+import json
+import hvac
+from lib.logger import logit
+#import logger
+import inspect
+
+import sys
+from time import sleep
+import boto3
+from botocore.exceptions import ClientError
+
+def import_load_tweet_conf():
+	
+	global VAULT_TOKEN
+	global VAULT_URL
+	global VAULT_SECRET
+	global AWS_DD_TABLE
+	global LOGS_PATH
+	
+	try:
+		import load_tweet_conf
+		reload(load_tweet_conf)
+	except Importerror:
+		print "Unable to import config"
+	
+	if load_tweet_conf:
+		config = load_tweet_conf.get_config()
+		VAULT_TOKEN = config['vault_token']
+		VAULT_URL = config['vault_url']
+		VAULT_SECRET = config['vault_secret']
+		AWS_DD_TABLE = config['aws_dd_table']
+	return
+	
+def lineno():
+		"""Returns the current line number in program."""
+		return inspect.currentframe().f_back.f_lineno
+
+
+def add(key, value):
+        temp = dict()
+        temp[key] = value
+		
+		
+#def aws_dynamodb_feed():
+#    print(f"Seeding {table_name} table...")
+#    table = boto3.resource("dynamodb").Table(table_name)
+#    try:
+#        with table.batch_writer() as batch:
+#			for i in range(50):	
+#				batch.put_item(Item={"id": str(i), "name": "Paquito Pinhorn"})
+#				print(table.scan()["Items"])
+#    except ClientError as e:
+#        print(e)
+
+def tweet_auth():
+	auth = tweepy.OAuthHandler("N80ugK5EqfJrwJA269wX8zQMB",
+							   "MrNEc1BMp6slFxmY3aR3yVDDq1kBGxYMvYp9mYBkQXaHTonfR2")
+	auth.set_access_token("270731366-H9NWv5xqLDjkW6NNjf62vzhGtqXn4hsrIBq229Rh",
+						  "sw4t0VEKmlh0g5jJo7pqepCxHkVBW5y9XAJD9tZt93ize")
+	api = tweepy.API(auth)
+
+	try:
+		api.verify_credentials()
+		print("Authentication OK")
+		auth = 1
+	except:
+		print("Error during twitter authentication")
+		auth = 0
+		exit(0)
+	
+	return api
+	
+	
+def tweet_read(api):
+	public_tweets = api.home_timeline(count=5)
+	print len(public_tweets)
+	for tweet in public_tweets:
+		tweet_str = tweet.text
+		#json_str = json.dumps(tweet_str._json)
+		#print json_str
+		time.sleep(2)
+	
+def vault_status():
+	
+	command = 'vault status'
+	output = run_command(command)
+	lines = output.split("\n")
+	for line in lines:
+		if re.search('Sealed',line):
+			temp = line.split("\s")
+			print temp[0]
+	
+	exit(0)
+
+def vault_read_keys():
+	sec = []
+	client = hvac.Client(vault_url, vault_token)
+	sec = client.read(VAULT_SECRET)
+	print sec['data']['ACCESS_TOKEN']
+	print sec['data']['ACCESS_TOKEN_SECRET']
+	print sec['data']['CONSUMER_KEY']
+	print sec['data']['CONSUMER_SECRET']
+	exit(0)
+	return sec
+
+def run_command(cmd):
+	outputobj = os.popen(cmd)
+	output = outputobj.read()
+	return output
+	
+if __name__ == "__main__":
+
+	#feed_dynamodb_data()
+	print("Done.")
+	
+	scriptname = sys.argv[0]
+	logit(scriptname,'d','Twitter bot running','E',lineno())
+	
+	
+	print "Loading config for script"
+	import_load_tweet_conf()
+	
+	print "Validating vault is unseal/seal"
+	vault_status()
+	
+	
+
