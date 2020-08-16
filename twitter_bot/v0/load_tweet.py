@@ -51,20 +51,25 @@ def add(key, value):
 	temp[key] = value
 
 
-#def aws_dynamodb_feed():
-#    print(f"Seeding {table_name} table...")
-#    table = boto3.resource("dynamodb").Table(table_name)
-#    try:
-#        with table.batch_writer() as batch:
-#                       for i in range(50):
-#                               batch.put_item(Item={"id": str(i), "name": "Paquito Pinhorn"})
-#                               print(table.scan()["Items"])
-#    except ClientError as e:
-#        print(e)
+def aws_dynamodb_upload(upload_list):
+	print "Running upload to %s table..."%AWS_DD_TABLE
+	cnt = 1
+	table = boto3.resource("dynamodb").Table(AWS_DD_TABLE)
+	pprint.pprint(table)
+	try:
+		with table.batch_writer() as batch:
+			list_len = len(upload_list)
+			for line in upload_list:
+				#batch.put_item(Item={"id": i, "name": "Paquito Pinhorn"})
+				print "Count - %d line - %s" %(cnt,line)
+				if cnt != list_len:
+					cnt += 1
+			
+				#print(table.scan()["Items"])
+	except ClientError as e:
+		print(e)
 
 def tweet_auth(conf):
-	#auth = tweepy.OAuthHandler("N80ugK5EqfJrwJA269wX8zQMB","MrNEc1BMp6slFxmY3aR3yVDDq1kBGxYMvYp9mYBkQXaHTonfR2")
-	#auth.set_access_token("270731366-H9NWv5xqLDjkW6NNjf62vzhGtqXn4hsrIBq229Rh","sw4t0VEKmlh0g5jJo7pqepCxHkVBW5y9XAJD9tZt93ize")
 	auth = tweepy.OAuthHandler(conf['data']['CONSUMER_KEY'],conf['data']['CONSUMER_SECRET'])
 	auth.set_access_token(conf['data']['ACCESS_TOKEN'],conf['data']['ACCESS_TOKEN_SECRET'])
 
@@ -135,14 +140,7 @@ def run_command(cmd):
 
 if __name__ == "__main__":
 
-	#feed_dynamodb_data()
-	print("Done.")
 
-	scriptname = sys.argv[0]
-	logit(scriptname,'d','Twitter bot running','E',lineno())
-
-
-	print "Loading config for script"
 	import_load_tweet_conf()
 
 	print "Validating vault is unseal/seal"
@@ -157,4 +155,4 @@ if __name__ == "__main__":
 	apiobj = tweet_auth(conf)
 
 	upload1 = tweet_read(apiobj)
-	pprint.pprint(upload1)
+	aws_dynamodb_upload(upload1)
